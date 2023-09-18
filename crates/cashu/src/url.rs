@@ -5,7 +5,7 @@
 
 use core::fmt;
 use core::str::FromStr;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use url::{ParseError, Url};
 
 /// Url Error
@@ -32,8 +32,17 @@ impl From<ParseError> for Error {
 }
 
 /// Unchecked Url
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
 pub struct UncheckedUrl(String);
+
+impl serde::ser::Serialize for UncheckedUrl {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.0.strip_suffix("/").unwrap_or(&self.0))
+    }
+}
 
 impl UncheckedUrl {
     /// New unchecked url
@@ -85,7 +94,7 @@ impl TryFrom<&UncheckedUrl> for Url {
 
 impl fmt::Display for UncheckedUrl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0.strip_suffix("/").unwrap_or(&self.0))
+        write!(f, "{}", self.0)
     }
 }
 
@@ -100,6 +109,8 @@ mod tests {
         let relay_url = Url::from_str(relay).unwrap();
 
         let unchecked_relay_url = UncheckedUrl::from(relay_url.clone());
+
+        print!("{:?}", serde_json::to_string(&unchecked_relay_url));
 
         assert_eq!(unchecked_relay_url, UncheckedUrl::from(relay));
 
